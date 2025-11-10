@@ -1,6 +1,4 @@
 version: 0.1.0
 dependencies:
-  idf:
-    version: ">=5.1"
   espressif/esp_check:
     version: "^1.0"
