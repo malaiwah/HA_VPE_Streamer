@@ -1,12 +1,9 @@
 #include "ledring.h"
 
-#include <string.h>
-#include <stdlib.h>
 #include <math.h>
 
 #include "driver/gpio.h"
-#include "driver/rmt_tx.h"
-#include "led_strip_encoder.h"
+#include "led_strip.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -15,9 +12,7 @@
 
 #define TAG "ledring"
 
-static rmt_channel_handle_t s_rmt_channel;
-static rmt_encoder_handle_t s_led_encoder;
-static uint8_t *s_pixels;
+static led_strip_handle_t s_strip;
 static int s_led_count;
 static int s_power_pin = -1;
 static ledring_state_t s_state = LEDRING_STATE_BOOT;
@@ -30,15 +25,14 @@ static void ledring_task(void *arg);
 
 static inline void set_pixel(int idx, uint32_t rgb)
 {
-    if (!s_pixels || idx < 0 || idx >= s_led_count) {
+    if (!s_strip || idx < 0 || idx >= s_led_count) {
         return;
     }
     uint8_t r = (rgb >> 16) & 0xFF;
     uint8_t g = (rgb >> 8) & 0xFF;
     uint8_t b = rgb & 0xFF;
-    s_pixels[idx * 3 + 0] = g;
-    s_pixels[idx * 3 + 1] = r;
-    s_pixels[idx * 3 + 2] = b;
+    // Driver handles GRB ordering via color_component_format
+    (void)led_strip_set_pixel(s_strip, idx, r, g, b);
 }
 
 static void fill_color(uint32_t rgb)
@@ -137,11 +131,9 @@ static void ledring_draw(int tick)
         break;
     }
 
-    rmt_transmit_config_t tx_cfg = {
-        .loop_count = 0,
-    };
-    rmt_transmit(s_rmt_channel, s_led_encoder, s_pixels, s_led_count * 3, &tx_cfg);
-    rmt_tx_wait_all_done(s_rmt_channel, portMAX_DELAY);
+    if (s_strip) {
+        led_strip_refresh(s_strip);
+    }
 }
 
 static void ledring_task(void *arg)
@@ -160,8 +152,6 @@ esp_err_t ledring_init(int data_pin, int power_pin, int led_count)
     }
     s_led_count = led_count;
     s_power_pin = power_pin;
-    s_pixels = calloc(led_count, 3);
-    ESP_RETURN_ON_FALSE(s_pixels != NULL, ESP_ERR_NO_MEM, TAG, "pixel alloc");
 
     if (s_power_pin >= 0) {
         gpio_config_t cfg = {
@@ -175,23 +165,26 @@ esp_err_t ledring_init(int data_pin, int power_pin, int led_count)
         gpio_set_level(s_power_pin, 1);
     }
 
-    rmt_tx_channel_config_t tx_cfg = {
-        .gpio_num = data_pin,
+    led_strip_config_t strip_cfg = {
+        .strip_gpio_num = data_pin,
+        .max_leds = led_count,
+        .led_model = LED_MODEL_WS2812,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+        .flags = {
+            .invert_out = false,
+        },
+    };
+
+    led_strip_rmt_config_t rmt_cfg = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
-        .mem_block_symbols = 64,
         .resolution_hz = 10 * 1000 * 1000,
-        .trans_queue_depth = 4,
+        .mem_block_symbols = 0,
         .flags = {
             .with_dma = false,
         },
     };
-    ESP_RETURN_ON_ERROR(rmt_new_tx_channel(&tx_cfg, &s_rmt_channel), TAG, "new tx channel");
-
-    led_strip_encoder_config_t encoder_cfg = {
-        .resolution = 10 * 1000 * 1000,
-    };
-    ESP_RETURN_ON_ERROR(led_strip_new_encoder(&encoder_cfg, &s_led_encoder), TAG, "encoder");
-    ESP_RETURN_ON_ERROR(rmt_enable(s_rmt_channel), TAG, "rmt enable");
+    ESP_RETURN_ON_ERROR(led_strip_new_rmt_device(&strip_cfg, &rmt_cfg, &s_strip), TAG, "strip");
+    led_strip_clear(s_strip);
 
     s_lock = xSemaphoreCreateMutex();
     ESP_RETURN_ON_FALSE(s_lock != NULL, ESP_ERR_NO_MEM, TAG, "lock");
