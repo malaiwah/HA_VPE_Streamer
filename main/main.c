@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <stdint.h>
+#include <ctype.h>
+#include <strings.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,6 +16,7 @@
 #include "esp_event.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
+#include "esp_err.h"
 #include "esp_netif.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -57,6 +60,59 @@ static esp_netif_t *g_wifi_sta;
 static void audio_capture_task(void *arg);
 static void audio_play_task(void *arg);
 static void play_test_beep(void);
+static void normalize_server_url(char *url, size_t len);
+
+static void normalize_server_url(char *url, size_t len)
+{
+    if (!url || len == 0) {
+        return;
+    }
+
+    char working[128] = {0};
+    size_t src_len = strnlen(url, len);
+    size_t start = 0;
+    while (start < src_len && isspace((unsigned char)url[start])) {
+        start++;
+    }
+    size_t end = src_len;
+    while (end > start && isspace((unsigned char)url[end - 1])) {
+        end--;
+    }
+    size_t trimmed_len = end > start ? end - start : 0;
+    if (trimmed_len >= sizeof(working)) {
+        trimmed_len = sizeof(working) - 1;
+    }
+    if (trimmed_len > 0) {
+        memcpy(working, &url[start], trimmed_len);
+        working[trimmed_len] = '\0';
+    }
+
+    const char *source = working;
+    char normalized[128] = {0};
+    if (trimmed_len == 0) {
+        strlcpy(normalized, "ws://aiboss.lan.home.malaiwah.com:7000/", sizeof(normalized));
+    } else if (strncasecmp(source, "ws://", 5) == 0 || strncasecmp(source, "wss://", 6) == 0) {
+        strlcpy(normalized, source, sizeof(normalized));
+    } else if (strncmp(source, "://", 3) == 0) {
+        snprintf(normalized, sizeof(normalized), "ws%s", source);
+    } else if (strncmp(source, "//", 2) == 0) {
+        snprintf(normalized, sizeof(normalized), "ws:%s", source);
+    } else if (strstr(source, "://") != NULL) {
+        strlcpy(normalized, source, sizeof(normalized));
+    } else {
+        snprintf(normalized, sizeof(normalized), "ws://%s", source);
+    }
+
+    char *host = strstr(normalized, "://");
+    if (host) {
+        host += 3;
+        while (*host == ':') {
+            memmove(host, host + 1, strlen(host));
+        }
+    }
+
+    strlcpy(url, normalized, len);
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -78,7 +134,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 static esp_err_t nvs_load_config(voice_config_t *config)
 {
     nvs_handle_t nvs;
-    esp_err_t err = nvs_open("voice", NVS_READONLY, &nvs);
+    esp_err_t err = nvs_open("voice", NVS_READWRITE, &nvs);
     if (err != ESP_OK) {
         return err;
     }
@@ -97,6 +153,9 @@ static esp_err_t nvs_load_config(voice_config_t *config)
     if (nvs_get_str(nvs, "server", config->server_url, &len) != ESP_OK) {
         strlcpy(config->server_url, "ws://aiboss.lan.home.malaiwah.com:7000/", sizeof(config->server_url));
     }
+    char original_server[sizeof(config->server_url)];
+    strlcpy(original_server, config->server_url, sizeof(original_server));
+    normalize_server_url(config->server_url, sizeof(config->server_url));
     len = sizeof(config->token);
     if (nvs_get_str(nvs, "token", config->token, &len) != ESP_OK) {
         config->token[0] = '\0';
@@ -111,6 +170,14 @@ static esp_err_t nvs_load_config(voice_config_t *config)
     int32_t vol_mic = 100;
     nvs_get_i32(nvs, "vol_mic", &vol_mic);
     config->vol_mic = vol_mic;
+    if (strcmp(original_server, config->server_url) != 0) {
+        esp_err_t upd = nvs_set_str(nvs, "server", config->server_url);
+        if (upd == ESP_OK) {
+            nvs_commit(nvs);
+        } else {
+            ESP_LOGW(TAG, "Failed to persist normalized server URL: %s", esp_err_to_name(upd));
+        }
+    }
     nvs_close(nvs);
     return ESP_OK;
 }
@@ -379,6 +446,7 @@ void app_main(void)
         strlcpy(g_config.ssid, result.ssid, sizeof(g_config.ssid));
         strlcpy(g_config.pass, result.password, sizeof(g_config.pass));
         strlcpy(g_config.server_url, result.server_url, sizeof(g_config.server_url));
+        normalize_server_url(g_config.server_url, sizeof(g_config.server_url));
         strlcpy(g_config.token, result.token, sizeof(g_config.token));
         strlcpy(g_config.mode, result.mode, sizeof(g_config.mode));
         g_config.vol_spk = 80;
