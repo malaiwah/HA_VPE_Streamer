@@ -1,6 +1,6 @@
 # Home Assistant Voice Preview Puck Firmware
 
-This repository contains an ESP-IDF firmware project that turns the Home Assistant voice preview puck into an always-on duplex audio endpoint. The device captures microphone audio at 16 kHz and streams it over a persistent WebSocket connection while simultaneously playing audio received from the server.
+This project targets the original Home Assistant Voice Preview puck (ESP32-S3, 16 MB flash, 8 MB PSRAM) with the center push button, rotary encoder, microphone privacy switch, and LED ring. The firmware provides always-on duplex audio transport between the puck and a configurable WebSocket server using ESP-IDF v5.1+.
 
 ## Features
 
@@ -11,7 +11,44 @@ This repository contains an ESP-IDF firmware project that turns the Home Assista
 - HTTP status page with current configuration, diagnostics, and factory reset.
 - Optional Node.js bridge server for local loopback or custom integrations.
 
-## Building
+## Continuous integration & releases
+
+A GitHub Actions workflow (`Build and Release Firmware`) runs on every pull request and push to `main`:
+
+- **Pull requests** build the firmware and upload `ha_voice_puck_firmware.zip` and checksum files as workflow artifacts.
+- **Pushes to `main`** produce the same artifact and publish an automatic prerelease tagged `main-<run number>` that contains the ZIP bundle.
+
+You can download the ZIP bundle from the workflow run (PR) or from the latest prerelease on `main`. Each bundle contains:
+
+- `ha_voice_puck.bin` – application binary
+- `bootloader.bin` – bootloader image
+- `partition-table.bin` – partition layout
+- Optional flashing argument helpers (`flasher_args.json` / `flash_args`)
+- `SHA256SUMS` – checksum list for verification
+
+## Flashing prebuilt firmware
+
+1. Extract the downloaded ZIP file.
+2. Connect the puck to your computer via USB.
+3. Put the device in download mode if required (hold BOOT and tap RESET, then release BOOT).
+4. Flash using either method:
+   - **With `idf.py` (recommended if ESP-IDF is installed):**
+     ```bash
+     idf.py -p /dev/ttyACM0 flash
+     ```
+     Ensure the `port` argument matches your serial device.
+   - **With `esptool.py` and `flasher_args.json`:**
+     ```bash
+     esptool.py --chip esp32s3 --port /dev/ttyACM0 --before default_reset --after hard_reset \
+       write_flash @flasher_args.json
+     ```
+     Adjust the serial port path as necessary.
+
+After flashing, open a serial monitor (e.g., `idf.py -p /dev/ttyACM0 monitor`) to watch boot messages.
+
+## Building from source
+
+Install ESP-IDF v5.1+ and then run:
 
 ```bash
 idf.py set-target esp32s3
@@ -20,11 +57,11 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-### First boot provisioning
+## First boot provisioning
 
 1. Power on the puck; it enters provisioning mode if no Wi-Fi credentials are stored.
 2. Connect to the `Puck-Setup` network using password `voice-setup`.
-3. Browse to [http://192.168.4.1](http://192.168.4.1) and enter Wi-Fi SSID/password and WebSocket server URL (`ws://aiboss.lan.home.malaiwah.com:7000/` by default).
+3. Browse to [http://192.168.4.1](http://192.168.4.1) and enter Wi-Fi SSID/password, WebSocket server URL (`ws://aiboss.lan.home.malaiwah.com:7000/` default), optional token, and mode.
 4. The puck saves the configuration and restarts, then connects to the specified Wi-Fi network.
 
 ## LED ring states
@@ -55,7 +92,7 @@ npm start
 
 The bridge logs incoming audio frames and echoes the PCM data back to the puck.
 
-## Directory structure
+## Repository layout
 
 - `main/` – application entry point and orchestration.
 - `components/portal/` – provisioning SoftAP and captive portal.
