@@ -94,13 +94,16 @@ static void normalize_server_url(char *url, size_t len)
     } else if (strncasecmp(source, "ws://", 5) == 0 || strncasecmp(source, "wss://", 6) == 0) {
         strlcpy(normalized, source, sizeof(normalized));
     } else if (strncmp(source, "://", 3) == 0) {
-        snprintf(normalized, sizeof(normalized), "ws%s", source);
+        strlcpy(normalized, "ws", sizeof(normalized));
+        strlcat(normalized, source, sizeof(normalized));
     } else if (strncmp(source, "//", 2) == 0) {
-        snprintf(normalized, sizeof(normalized), "ws:%s", source);
+        strlcpy(normalized, "ws:", sizeof(normalized));
+        strlcat(normalized, source, sizeof(normalized));
     } else if (strstr(source, "://") != NULL) {
         strlcpy(normalized, source, sizeof(normalized));
     } else {
-        snprintf(normalized, sizeof(normalized), "ws://%s", source);
+        strlcpy(normalized, "ws://", sizeof(normalized));
+        strlcat(normalized, source, sizeof(normalized));
     }
 
     char *host = strstr(normalized, "://");
