@@ -316,7 +316,8 @@ static void audio_capture_task(void *arg)
             }
             float vu = (float)sum / (got * 32768.0f);
             ledring_set_vu(vu);
-            if (!g_muted && !g_privacy && ws_audio_is_connected()) {
+            if (!g_muted && !g_privacy && ws_audio_is_connected() &&
+                (!g_ptt_mode || controls_button_is_pressed())) {
                 ws_audio_queue_tx((const uint8_t *)frame, FRAME_SAMPLES * sizeof(int16_t));
                 ledring_set_state(LEDRING_STATE_STREAMING_TX);
             }

@@ -14,6 +14,7 @@ static controls_callbacks_t s_callbacks;
 static TaskHandle_t s_task;
 static int s_volume = 50;
 static bool s_muted;
+static bool s_button_pressed;
 static char s_mode[16] = "always_on";
 
 static void controls_task(void *arg)
@@ -32,6 +33,8 @@ static void controls_task(void *arg)
         bool mic_sw = gpio_get_level(s_pins.mic_switch);
         int enc_a = gpio_get_level(s_pins.encoder_a);
         int enc_b = gpio_get_level(s_pins.encoder_b);
+
+        s_button_pressed = !button;
 
         if (button != last_button) {
             if (!button) {
@@ -173,5 +176,10 @@ void controls_set_muted(bool muted)
 bool controls_get_muted(void)
 {
     return s_muted;
+}
+
+bool controls_button_is_pressed(void)
+{
+    return s_button_pressed;
 }
 

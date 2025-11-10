@@ -39,6 +39,7 @@ void controls_set_mode(const char *mode);
 const char *controls_get_mode(void);
 void controls_set_muted(bool muted);
 bool controls_get_muted(void);
+bool controls_button_is_pressed(void);
 
 #ifdef __cplusplus
 }
