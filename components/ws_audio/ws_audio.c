@@ -8,6 +8,7 @@
 #include "esp_mac.h"
 #include "esp_check.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #define TAG "ws_audio"
