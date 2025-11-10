@@ -1,4 +1,1 @@
 version: 0.1.0
-dependencies:
-  espressif/esp_check:
-    version: "^1.0"
