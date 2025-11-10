@@ -20,16 +20,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Set up ESP-IDF
-        uses: espressif/setup-esp-idf@v1
-        with:
-          version: v5.1
-
-      - name: Configure target
-        run: idf.py set-target esp32s3
-
       - name: Build firmware
-        run: idf.py build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          path: '.'
+          esp_idf_version: v5.1.2
+          target: esp32s3
+          command: |
+            idf.py set-target esp32s3
+            idf.py build
 
       - name: Package firmware bundle
         run: |
