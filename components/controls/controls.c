@@ -14,7 +14,7 @@ static controls_callbacks_t s_callbacks;
 static TaskHandle_t s_task;
 static int s_volume = 50;
 static bool s_muted;
-static bool s_button_pressed;
+static volatile bool s_button_pressed;
 static char s_mode[16] = "always_on";
 
 static void controls_task(void *arg)

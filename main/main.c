@@ -316,10 +316,13 @@ static void audio_capture_task(void *arg)
             }
             float vu = (float)sum / (got * 32768.0f);
             ledring_set_vu(vu);
-            if (!g_muted && !g_privacy && ws_audio_is_connected() &&
-                (!g_ptt_mode || controls_button_is_pressed())) {
+            bool streaming_allowed = !g_muted && !g_privacy && ws_audio_is_connected();
+            bool button_active = controls_button_is_pressed();
+            if (streaming_allowed && (!g_ptt_mode || button_active)) {
                 ws_audio_queue_tx((const uint8_t *)frame, FRAME_SAMPLES * sizeof(int16_t));
                 ledring_set_state(LEDRING_STATE_STREAMING_TX);
+            } else if (g_ptt_mode && streaming_allowed && !button_active) {
+                ledring_set_state(LEDRING_STATE_ONLINE_IDLE);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(5));
