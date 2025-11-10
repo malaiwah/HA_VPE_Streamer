@@ -109,7 +109,9 @@ npm install
 npm start
 ```
 
-The bridge logs incoming audio frames and forwards each client's microphone audio to every other connected client so you can test multi-puck conversations locally.
+The bridge now listens on `0.0.0.0:7000`, serves a browser UI at [http://localhost:7000/](http://localhost:7000/), and exposes a WebSocket endpoint (default `ws://localhost:7000/`). Browsers that load the UI can join the mix alongside hardware pucks. The page captures 16 kHz mono PCM and plays back remote audio through the default output device, letting you prototype multi-party conversations without extra tooling. Override `PORT`, `HOST`, or `WS_PATH` environment variables if you need to bind to a different interface, port, or path.
+
+If you configure a token during provisioning, append it as a query string (for example `ws://bridge.local:7000/?token=secret`). Set `BRIDGE_TOKEN=secret` when starting the Node bridge to require the same token from every client. The firmware forwards the token in its `hello` message so custom servers can authenticate connections as needed.
 
 ## Repository layout
 
