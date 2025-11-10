@@ -109,7 +109,7 @@ npm install
 npm start
 ```
 
-The bridge logs incoming audio frames and echoes the PCM data back to the puck.
+The bridge logs incoming audio frames and forwards each client's microphone audio to every other connected client so you can test multi-puck conversations locally.
 
 ## Repository layout
 
@@ -119,4 +119,4 @@ The bridge logs incoming audio frames and echoes the PCM data back to the puck.
 - `components/audio/` – I²S audio driver setup and helpers.
 - `components/controls/` – button, encoder, and mic switch handling.
 - `components/ledring/` – LED ring driver and animations.
-- `tools/bridge/` – optional Node.js WebSocket echo bridge.
+- `tools/bridge/` – optional Node.js multi-client WebSocket audio bridge.
