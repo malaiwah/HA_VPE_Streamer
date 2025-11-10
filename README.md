@@ -57,6 +57,25 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
+### macOS setup with Homebrew
+
+On macOS you can install the ESP-IDF toolchain and its prerequisites using [Homebrew](https://brew.sh/):
+
+```bash
+brew update
+brew install cmake ninja python@3.11 git wget
+brew install --cask gnu-sed
+brew install espressif/idf/esp-idf
+```
+
+After installation, export the ESP-IDF environment before building:
+
+```bash
+source "$(brew --prefix esp-idf)/export.sh"
+```
+
+You can then follow the standard build steps above. macOS typically exposes USB serial ports under `/dev/tty.usbserial-*` or `/dev/tty.usbmodem*`; substitute the correct path when flashing.
+
 ## First boot provisioning
 
 1. Power on the puck; it enters provisioning mode if no Wi-Fi credentials are stored.
