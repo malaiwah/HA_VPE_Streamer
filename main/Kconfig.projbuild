@@ -1,0 +1,85 @@
+menu "Home Assistant Voice Puck"
+
+choice
+    prompt "Hardware preset"
+    default PRESET_PUCK_A
+    help
+        Select a predefined mapping for the preview puck hardware.
+
+config PRESET_PUCK_A
+    bool "Preset Puck A"
+
+config PRESET_PUCK_B
+    bool "Preset Puck B"
+
+endchoice
+
+config PUCK_MIC_BCLK_PIN
+    int "Mic I2S BCLK"
+    default 6 if PRESET_PUCK_A
+    default 35 if PRESET_PUCK_B
+
+config PUCK_MIC_WS_PIN
+    int "Mic I2S WS/LRCLK"
+    default 7 if PRESET_PUCK_A
+    default 36 if PRESET_PUCK_B
+
+config PUCK_MIC_DATA_PIN
+    int "Mic I2S DIN"
+    default 8 if PRESET_PUCK_A
+    default 37 if PRESET_PUCK_B
+
+config PUCK_SPK_BCLK_PIN
+    int "Speaker I2S BCLK"
+    default 9 if PRESET_PUCK_A
+    default 13 if PRESET_PUCK_B
+
+config PUCK_SPK_WS_PIN
+    int "Speaker I2S WS/LRCLK"
+    default 10 if PRESET_PUCK_A
+    default 14 if PRESET_PUCK_B
+
+config PUCK_SPK_DATA_PIN
+    int "Speaker I2S DOUT"
+    default 11 if PRESET_PUCK_A
+    default 12 if PRESET_PUCK_B
+
+config PUCK_ENCODER_A_PIN
+    int "Encoder A"
+    default 18 if PRESET_PUCK_A
+    default 21 if PRESET_PUCK_B
+
+config PUCK_ENCODER_B_PIN
+    int "Encoder B"
+    default 17 if PRESET_PUCK_A
+    default 20 if PRESET_PUCK_B
+
+config PUCK_ENCODER_SW_PIN
+    int "Encoder button"
+    default 16 if PRESET_PUCK_A
+    default 19 if PRESET_PUCK_B
+
+config PUCK_BUTTON_K0_PIN
+    int "PTT button K0"
+    default 4 if PRESET_PUCK_A
+    default 5 if PRESET_PUCK_B
+
+config PUCK_MIC_SWITCH_PIN
+    int "Mic privacy switch"
+    default 3 if PRESET_PUCK_A
+    default 15 if PRESET_PUCK_B
+
+config PUCK_LED_DATA_PIN
+    int "LED ring data"
+    default 1 if PRESET_PUCK_A
+    default 2 if PRESET_PUCK_B
+
+config PUCK_LED_PWR_PIN
+    int "LED ring power enable"
+    default -1
+
+config PUCK_LED_COUNT
+    int "Number of LEDs in ring"
+    default 16
+
+endmenu
